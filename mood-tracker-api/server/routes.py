@@ -48,3 +48,21 @@ def login():
         return jsonify({"id": user.id, "username": user.username}), 200
 
     return jsonify({"errors": ["Invalid username or password."]}), 401
+
+
+@app.get('/check_session')
+def check_session():
+    user_id = session.get('user_id')
+
+    if user_id:
+        user = db.session.get(User, user_id)
+        if user:
+            return jsonify({"id": user.id, "username": user.username}), 200
+
+    return jsonify({"errors": ["Unauthorized"]}), 401
+
+
+@app.delete('/logout')
+def logout():
+    session['user_id'] = None
+    return {}, 204   
