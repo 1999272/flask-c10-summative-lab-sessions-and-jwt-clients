@@ -33,3 +33,18 @@ def signup():
     session['user_id'] = user.id
 
     return jsonify({"id": user.id, "username": user.username}), 201
+
+
+@app.post('/login')
+def login():
+    json_data = request.get_json(silent=True) or {}
+    username = json_data.get('username')
+    password = json_data.get('password')
+
+    user = User.query.filter_by(username=username).first()
+
+    if user and user.authenticate(password):
+        session['user_id'] = user.id
+        return jsonify({"id": user.id, "username": user.username}), 200
+
+    return jsonify({"errors": ["Invalid username or password."]}), 401
