@@ -98,3 +98,33 @@ def get_mood_entries():
         "total_pages": pagination.pages,
         "total_entries": pagination.total,
     }), 200
+
+
+@app.post('/mood_entries')
+def create_mood_entry():
+    if not session.get('user_id'):
+        return jsonify({"errors": ["Unauthorized"]}), 401
+
+    json_data = request.get_json(silent=True) or {}
+
+    try:
+        entry =MoodEntry(
+            mood=json_data.get('mood'),
+            intensity=json_data.get('intensity'),
+            note=json_data.get('note'),
+            user_id=session['user_id']
+        )
+        db.session.add(entry)
+        db.session.commit()
+    except (ValueError, IntegrityError) as err:
+        db.session.rollback()
+        return jsonify({"errors": [str(err)]}), 400
+
+    return jsonify({
+        "id": entry.id,
+        "mood": entry.mood,
+        "intensity": entry.intensity,
+        "note": entry.note,
+        "created_at": entry.created_at.isoformat() if entry.created_at else None,
+        "user_id": entry.user_id,
+    }), 201
