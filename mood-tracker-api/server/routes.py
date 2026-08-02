@@ -2,7 +2,7 @@ from flask import request, session, jsonify
 from sqlalchemy.exc import IntegrityError
 
 from app import app
-from models import db, User
+from models import db, User, MoodEntry
 
 
 
@@ -66,3 +66,35 @@ def check_session():
 def logout():
     session['user_id'] = None
     return {}, 204   
+
+
+@app.get('/mood_entries')
+def get_mood_entries():
+    if not session.get('user_id'):
+        return jsonify({"errors": ["Unauthorized"]}), 401
+
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 5, type=int)
+
+    pagination = MoodEntry.query.filter_by(
+        user_id=session['user_id']
+    ).paginate(page=page, per_page=per_page, error_out=False)
+
+    entries = [
+        {
+            "id": e.id,
+            "mood": e.mood,
+            "intensity": e.intensity,
+            "note": e.note,
+            "created_at": e.created_at.isoformat() if e.created_at else None,
+            "user_id": e.user_id,
+        }
+        for e in pagination.items
+    ]
+
+    return jsonify({
+        "entries": entries,
+        "page": pagination.page,
+        "total_pages": pagination.pages,
+        "total_entries": pagination.total,
+    }), 200
