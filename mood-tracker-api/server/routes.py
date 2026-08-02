@@ -128,3 +128,14 @@ def create_mood_entry():
         "created_at": entry.created_at.isoformat() if entry.created_at else None,
         "user_id": entry.user_id,
     }), 201
+
+def find_owned_entry(id):
+    entry = db.session.get(MoodEntry, id)
+
+    if not entry:
+        return None, (jsonify({"errors": ["Mood entry not found."]}), 404)
+
+    if entry.user_id != session['user_id']:
+        return None, (jsonify({"errors": ["Forbidden."]}), 403)
+
+    return entry, None
