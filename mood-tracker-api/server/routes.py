@@ -139,3 +139,66 @@ def find_owned_entry(id):
         return None, (jsonify({"errors": ["Forbidden."]}), 403)
 
     return entry, None
+
+
+@app.get('/mood_entries/<int:id>')
+def get_mood_entry(id):
+    if not session.get('user_id'):
+        return jsonify({"errors": ["Unauthorized"]}), 401
+
+    entry, error = find_owned_entry(id)
+    if error:
+        return error
+
+    return jsonify({
+        "id": entry.id,
+        "mood": entry.mood,
+        "intensity": entry.intensity,
+        "note": entry.note,
+        "created_at": entry.created_at.isoformat() if entry.created_at else None,
+        "user_id": entry.user_id,
+    }), 200
+
+
+@app.patch('/mood_entries/<int:id>')
+def update_mood_entry(id):
+    if not session.get('user_id'):
+        return jsonify({"errors": ["Unauthorized"]}), 401
+
+    entry, error = find_owned_entry(id)
+    if error:
+        return error
+
+    json_data = request.get_json(silent=True) or {}
+
+    try:
+        for field in ('mood', 'intensity', 'note'):
+            if field in json_data:
+                setattr(entry, field, json_data[field])
+        db.session.commit()
+    except (ValueError, TypeError) as err:
+        db.session.rollback()
+        return jsonify({"errors": [str(err)]}), 400
+
+    return jsonify({
+        "id": entry.id,
+        "mood": entry.mood,
+        "intensity": entry.intensity,
+        "note": entry.note,
+        "created_at": entry.created_at.isoformat() if entry.created_at else None,
+        "user_id": entry.user_id,
+    }), 200
+
+
+@app.delete('/mood_entries/<int:id>')
+def delete_mood_entry(id):
+    if not session.get('user_id'):
+        return jsonify({"errors": ["Unauthorized"]}), 401
+
+    entry, error = find_owned_entry(id)
+    if error:
+        return error
+
+    db.session.delete(entry)
+    db.session.commit()
+    return {}, 204
